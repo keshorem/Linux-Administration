@@ -1,5 +1,5 @@
 resource "aws_vpc" "vpc_for_aws_resource" {
-    vpc_id = ""
+    cidr_block = "${var.vpc_cidr_block}"
     enable_dns_support = true
     enable_dns_hostname = true
 
@@ -9,28 +9,27 @@ resource "aws_vpc" "vpc_for_aws_resource" {
 }
 
 resource "aws_subnet" "configuring_vpc" {
-    vpc_id = ""
-    cidr_block = ""
-    availability_zone = ""
-    map_public_ip_on_launch = ""
+    vpc_id = "${aws_vpc.cidr_block}"
+    cidr_block = "${var.subnet_cidr_block}"
+    availability_zone = "us-east-1"
 }
 
 resource "aws_security_group" "sg_for_app"{
-    vpc_id = ""
-    name = ""
-    description = ""
+    vpc_id = "${aws_vpc.cidr_block}"
+    name = "private security group"
+    description = "private security group with various inbound and outbound rules"
     ingress {
-        security_groups = []
-        from_port = 
-        to_port = 
-        protocol =
+        security_groups = ["${aws_security_group.sg_for_app.id}"]
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
     }
 
     egress {
-        security_groups = []
-        from_port = 
-        to_port = 
-        protocol = 
+        cidr_block = ["0.0.0.0/0"]
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
     }
 
     tags = {
