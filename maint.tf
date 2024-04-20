@@ -1,28 +1,8 @@
-resource "tls_private_key" "instance_key" {
-    algorithm = "RSA"
-}
-
-resource "aws_key_pair" "generate_key_pair" {
-    key_name = "instance_key"
-    public_key = tls_private_key.instance_key.public_key_openssh
-    depends_on = [
-        tls_private_key.instance_key
-    ]
-}
-
-resource "local_file" "generate_pem_file"{
-    content = tls_private_key.instance_key.private_key_pem
-    filename = "key-value.pem"
-    file_permission = "0400"
-    depends_on = [
-        tls_private_key.instance_key
-    ]
-}
 
 resource "aws_vpc" "vpc_for_aws_resource" {
     cidr_block = "${var.vpc_cidr_block}"
     enable_dns_support = true
-    enable_dns_hostname = true
+    enable_dns_hostnames = true
 
     tags = {
         Project = "vpcendpoint-dynamodb-table"
@@ -30,24 +10,23 @@ resource "aws_vpc" "vpc_for_aws_resource" {
 }
 
 resource "aws_subnet" "configuring_vpc" {
-    vpc_id = "${aws_vpc.cidr_block}"
+    vpc_id = aws_vpc.vpc_for_aws_resource.id
     cidr_block = "${var.subnet_cidr_block}"
-    availability_zone = "us-east-1"
+    availability_zone = "us-east-1a"
 }
 
 resource "aws_security_group" "sg_for_app"{
-    vpc_id = "${aws_vpc.cidr_block}"
+    vpc_id = aws_vpc.vpc_for_aws_resource.id
     name = "private security group"
     description = "private security group with various inbound and outbound rules"
     ingress {
-        security_groups = ["${aws_security_group.sg_for_app.id}"]
-        from_port = 0
-        to_port = 0
-        protocol = "-1"
+        from_port = 22
+        to_port = 22
+        protocol = "TCP"
     }
 
     egress {
-        cidr_block = ["0.0.0.0/0"]
+        cidr_blocks = ["0.0.0.0/0"]
         from_port = 0
         to_port = 0
         protocol = "-1"
@@ -87,6 +66,7 @@ resource "aws_dynamodb_table" "table_records" {
         write_capacity = 10
         read_capacity = 10
         non_key_attributes = ["studentid"]
+        projection_type = "INCLUDE"
     }
 
     tags = {
@@ -96,10 +76,9 @@ resource "aws_dynamodb_table" "table_records" {
 }
 
 resource "aws_vpc_endpoint" "connect_to_dynamodb"{
-    vpc_id = aws_vpc.main.id
-    service_name = "dynamodb.us-east-1.amazonaws.com"
+    vpc_id = aws_vpc.vpc_for_aws_resource.id
+    service_name = "com.amazonaws.us-east-1.dynamodb"
     vpc_endpoint_type = "Interface"
-    private_dns_enabled = true
 }
 
 data "aws_ami" "ubuntu" {
@@ -116,11 +95,10 @@ data "aws_subnet" "get_subnet_id" {
 }
 
 resource "aws_instance" "launch_ec2_instance" {
-    ami_id = data.aws_ami.ubuntu.id
+    ami = data.aws_ami.ubuntu.id
     instance_type = "t2.micro"
-    subnet_id = data.aws_subnet.get_subnet_id
-    key_name = aws_key_pair.generate_key_pair.key_name
-    vpc_security_ids = [aws_security_group.sg_for_app.id]
+    subnet_id = data.aws_subnet.get_subnet_id.id
+    security_groups = [aws_security_group.sg_for_app.id]
     associate_public_ip_address = true
     tags = {
         Project = "vpcendpoint-dynamodb-table"
