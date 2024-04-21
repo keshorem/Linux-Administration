@@ -30,3 +30,7 @@ Terraform installed locally. Installation instructions can be found here (https:
 
 ## Cleanup ##
 To avoid incurring unnecessary charges, it's important to clean up the resources when they are no longer needed. To do so, run terraform destroy after you're done using the system.
+
+## Architectural Diagram ##
+![VPCEndpoint-DynamoDB drawio](https://github.com/keshorem/vpc-endpoint-terraform-module/assets/107935939/19735e30-4a42-40f7-921e-566c92ef3c7e)
+
